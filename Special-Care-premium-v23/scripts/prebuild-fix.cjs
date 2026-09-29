@@ -46,9 +46,26 @@ if (!uiSource.startsWith("// @ts-nocheck")) {
   fs.writeFileSync(uiPath, uiSource);
 }
 
-// Do not rewrite imports from the real server-action module.
-// Next.js supports importing async server actions from a "use server" module
-// into Client Components. Rewriting them to a facade caused the facade to
-// export `*` from another "use server" file, which Turbopack rejects.
+// Client Components must consume the explicit async server-action facade.
+// Next.js/Turbopack can otherwise treat the large internal "use server"
+// module as a server-only module during TypeScript checking and report its
+// action exports as missing. Rewrite only application imports, never the two
+// action implementation files themselves.
+function rewriteActionImports(dir) {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      rewriteActionImports(full);
+      continue;
+    }
+    if (!/\.(ts|tsx)$/.test(entry.name)) continue;
+    const normalized = path.relative(root, full).replaceAll(path.sep, "/");
+    if (normalized === "src/app/actions.ts" || normalized === "src/app/actions-public.ts") continue;
+    let source = fs.readFileSync(full, "utf8");
+    const next = source.replaceAll('from "@/app/actions"', 'from "@/app/actions-public"');
+    if (next !== source) fs.writeFileSync(full, next);
+  }
+}
+rewriteActionImports(path.join(root, "src"));
 
 console.log("Prebuild type fixes applied.");
