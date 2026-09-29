@@ -6,8 +6,6 @@ import { cases, followUps, notes, medicalReports, users, roles, centers, parents
 import { hashPassword } from "@/lib/auth";
 import { getCurrentAppUser } from "@/lib/session";
 
-export * from "./actions";
-
 async function session() {
   const user = await getCurrentAppUser();
   if (!user) throw new Error("الجلسة غير صالحة");
