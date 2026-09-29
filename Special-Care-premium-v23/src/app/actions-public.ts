@@ -2,7 +2,7 @@
 
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { cases, followUps, notes, medicalReports, users, roles, centers, parents, parentChildren, childCenters } from "@/db/schema";
+import { cases, caseServices, followUps, notes, medicalReports, users, roles, centers, parents, parentChildren, childCenters } from "@/db/schema";
 import { hashPassword } from "@/lib/auth";
 import { getCurrentAppUser } from "@/lib/session";
 import { createCase as createCaseAction, updateCase as updateCaseAction } from "./actions";
@@ -43,6 +43,25 @@ export async function updateCaseStatus(input:any, maybeStatus?:any) {
   const user=await session(); const caseId=typeof input==="string"?input:input?.caseId; const status=typeof input==="string"?maybeStatus:input?.status;
   const [row]=await db.update(cases).set({status,updatedAt:new Date()}).where(and(eq(cases.id,caseId),eq(cases.centerId,user.centerId))).returning();
   return row?{ok:true}:{ok:false,error:"الحالة غير موجودة"};
+}
+export async function updateCaseServiceStatus(input:any, maybeStatus?:any) {
+  const user = await session();
+  const x = typeof input === "string" ? { caseServiceId: input, status: maybeStatus } : (input ?? {});
+  const caseServiceId = x.caseServiceId ?? x.id;
+  const status = x.status;
+  const allowed = ["ACTIVE", "COMPLETED", "PAUSED", "CANCELLED"];
+  if (!caseServiceId || !allowed.includes(status)) {
+    return { ok:false, error:"بيانات حالة الخدمة غير صالحة" };
+  }
+  const [row] = await db
+    .select({ id: caseServices.id })
+    .from(caseServices)
+    .innerJoin(cases, eq(caseServices.caseId, cases.id))
+    .where(and(eq(caseServices.id, caseServiceId), eq(cases.centerId, user.centerId)))
+    .limit(1);
+  if (!row) return { ok:false, error:"الخدمة غير موجودة" };
+  await db.update(caseServices).set({ status }).where(eq(caseServices.id, caseServiceId));
+  return { ok:true, id:caseServiceId };
 }
 export async function changeOwnPassword(input:any, maybePassword?:any) {
   const user=await session(); const password=typeof input==="string"?maybePassword:input?.newPassword??input?.password;
