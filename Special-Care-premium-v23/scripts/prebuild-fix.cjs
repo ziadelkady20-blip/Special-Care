@@ -21,7 +21,7 @@ patch("src/app/actions.ts", [
     `const wizardBaseSchema = z.object({`,
   ],
   [
-    `}).superRefine((v, ctx) => validateCaseTimeline(v, ctx));\n\nfunction validateCaseTimeline(v: z.infer<typeof wizardSchema>, ctx: z.RefinementCtx)`,
+    `}).superRefine((v, ctx) => validateCaseTimeline(v, ctx);\n\nfunction validateCaseTimeline(v: z.infer<typeof wizardSchema>, ctx: z.RefinementCtx)`,
     `});\nconst wizardSchema = wizardBaseSchema.superRefine((v, ctx) => validateCaseTimeline(v, ctx));\n\nfunction validateCaseTimeline(v: z.infer<typeof wizardBaseSchema>, ctx: z.RefinementCtx)`,
   ],
   [
@@ -46,23 +46,9 @@ if (!uiSource.startsWith("// @ts-nocheck")) {
   fs.writeFileSync(uiPath, uiSource);
 }
 
-// Keep application consumers on the stable action facade. The implementation
-// file intentionally contains many internal helpers and is not the public
-// module surface consumed by pages/components.
-function rewriteActionImports(dir) {
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      rewriteActionImports(full);
-      continue;
-    }
-    if (!/\.(ts|tsx)$/.test(entry.name)) continue;
-    if (entry.name === "actions-public.ts") continue;
-    let source = fs.readFileSync(full, "utf8");
-    const updated = source.replaceAll('"@/app/actions"', '"@/app/actions-public"');
-    if (updated !== source) fs.writeFileSync(full, updated);
-  }
-}
-rewriteActionImports(path.join(root, "src"));
+// Do not rewrite imports from the real server-action module.
+// Next.js supports importing async server actions from a "use server" module
+// into Client Components. Rewriting them to a facade caused the facade to
+// export `*` from another "use server" file, which Turbopack rejects.
 
 console.log("Prebuild type fixes applied.");
