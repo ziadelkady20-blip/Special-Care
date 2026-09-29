@@ -1,0 +1,108 @@
+import Link from "next/link";
+import { requireSession } from "@/lib/session";
+import { db } from "@/db";
+import { parentChildren, children, childCenters, centers, disabilities, childProfiles } from "@/db/schema";
+import { and, eq, inArray } from "drizzle-orm";
+import { createParentChild } from "@/app/actions";
+import { SubmitButton } from "@/components/ui";
+
+export default async function ParentDashboard() {
+  const session = await requireSession();
+  if (session.user.accountType !== "PARENT" || !session.user.parentId) return null;
+
+  const rows = await db.select({ child: children, link: parentChildren })
+    .from(parentChildren).innerJoin(children, eq(parentChildren.childId, children.id))
+    .where(eq(parentChildren.parentId, session.user.parentId));
+
+  const childIds = rows.map((r) => r.child.id);
+  const memberships = childIds.length
+    ? await db.select({ membership: childCenters, center: centers, child: children })
+      .from(childCenters)
+      .innerJoin(centers, eq(childCenters.centerId, centers.id))
+      .innerJoin(children, eq(childCenters.childId, children.id))
+      .where(and(inArray(childCenters.childId, childIds), eq(childCenters.status, "ACTIVE")))
+    : [];
+
+  const profiles = childIds.length
+    ? await db.select({ profile: childProfiles, disabilityName: disabilities.name })
+      .from(childProfiles)
+      .leftJoin(disabilities, eq(childProfiles.disabilityId, disabilities.id))
+      .where(inArray(childProfiles.childId, childIds))
+    : [];
+  const profileMap = new Map(profiles.map((p) => [p.profile.childId, p]));
+
+  return <div className="space-y-8">
+    <div>
+      <p className="text-sm text-primary font-semibold">بوابة ولي الأمر</p>
+      <h1 className="text-3xl font-bold text-ink mt-1">أهلاً {session.user.name} 👋</h1>
+      <p className="text-muted mt-2">أنشئ ملف طفلك مرة واحدة، ثم اربطه بالمراكز التي يتابع معها من مكان واحد.</p>
+    </div>
+
+    <section className="rounded-2xl border border-primary/10 bg-primary/[0.035] p-5">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <p className="text-xs font-semibold text-primary">كيف تعمل المنصة؟</p>
+          <h2 className="text-lg font-bold text-ink mt-1">ملف واحد للطفل عبر كل المراكز</h2>
+          <p className="text-sm text-muted mt-1">بيانات الطفل الأساسية تظل مع ولي الأمر، بينما كل مركز يحتفظ بمتابعاته وخدماته وتقاريره الخاصة.</p>
+        </div>
+        <Link href="/centers" className="inline-flex h-10 items-center justify-center rounded-xl bg-primary px-4 text-sm font-semibold text-white">استكشف المراكز</Link>
+      </div>
+    </section>
+
+    <div className="grid lg:grid-cols-3 gap-5">
+      <section className="lg:col-span-2 rounded-2xl border border-border bg-surface p-6">
+        <div className="flex items-center justify-between mb-5">
+          <div><h2 className="font-bold text-xl">أطفالي</h2><p className="text-xs text-muted mt-1">ملفاتهم الصحية وعلاقتهم بالمراكز</p></div>
+          <span className="rounded-full bg-primary/10 text-primary px-3 py-1 text-xs font-semibold">{rows.length} طفل</span>
+        </div>
+        <div className="space-y-4">
+          {rows.length === 0 ? <p className="text-sm text-muted py-8 text-center">لم تتم إضافة طفل بعد.</p> : rows.map(({ child }) => {
+            const profile = profileMap.get(child.id);
+            const childCenters = memberships.filter((m) => m.child.id === child.id);
+            return <div key={child.id} className="rounded-2xl border border-border p-5">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-11 w-11 rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-bold">{child.firstName.slice(0, 1)}</div>
+                  <div><p className="font-semibold text-ink">{child.firstName} {child.middleName ?? ""} {child.lastName}</p><p className="text-xs text-muted mt-1">{child.city ?? "—"} · {child.gender === "MALE" ? "ذكر" : "أنثى"}</p></div>
+                </div>
+                <div className="flex items-center gap-2"><span className="rounded-full bg-success/10 text-success px-3 py-1 text-xs">ملف نشط</span><Link href={`/parent/children/${child.id}`} className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-primary">عرض الملف</Link></div>
+              </div>
+              <div className="grid sm:grid-cols-2 gap-3 mt-4">
+                <div className="rounded-xl bg-background p-3"><p className="text-[11px] text-muted">التشخيص</p><p className="text-sm font-medium mt-1">{profile?.profile.diagnosisName ?? "لم تتم إضافته بعد"}</p></div>
+                <div className="rounded-xl bg-background p-3"><p className="text-[11px] text-muted">المراكز</p><p className="text-sm font-medium mt-1">{childCenters.length ? childCenters.map((m) => m.center.name).join("، ") : "لم ينضم لأي مركز بعد"}</p></div>
+              </div>
+            </div>;
+          })}
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-border bg-surface p-6">
+        <h2 className="font-bold text-xl">إضافة طفل</h2>
+        <p className="text-xs text-muted mt-1">املأ البيانات الأساسية والحالة الصحية مرة واحدة.</p>
+        <form action={createParentChild} className="mt-4 space-y-3">
+          <input name="firstName" required placeholder="الاسم الأول" className="w-full rounded-xl border border-border px-3 py-2" />
+          <input name="middleName" placeholder="الاسم الأوسط" className="w-full rounded-xl border border-border px-3 py-2" />
+          <input name="lastName" required placeholder="اسم العائلة" className="w-full rounded-xl border border-border px-3 py-2" />
+          <input name="dateOfBirth" required type="date" className="w-full rounded-xl border border-border px-3 py-2" />
+          <select name="gender" className="w-full rounded-xl border border-border px-3 py-2"><option value="MALE">ذكر</option><option value="FEMALE">أنثى</option></select>
+          <input name="nationalId" placeholder="الرقم القومي (اختياري)" className="w-full rounded-xl border border-border px-3 py-2" />
+          <input name="phone" placeholder="رقم الطفل/التواصل" className="w-full rounded-xl border border-border px-3 py-2" />
+          <input name="city" placeholder="المدينة" className="w-full rounded-xl border border-border px-3 py-2" />
+          <select name="disabilityId" className="w-full rounded-xl border border-border px-3 py-2"><option value="">نوع الإعاقة / التشخيص العام</option>{(await db.select().from(disabilities)).map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}</select>
+          <input name="diagnosisName" placeholder="اسم التشخيص" className="w-full rounded-xl border border-border px-3 py-2" />
+          <input name="diagnosisDate" type="date" className="w-full rounded-xl border border-border px-3 py-2" />
+          <select name="severity" className="w-full rounded-xl border border-border px-3 py-2"><option value="">درجة الحالة</option><option value="MILD">بسيطة</option><option value="MODERATE">متوسطة</option><option value="SEVERE">شديدة</option><option value="PROFOUND">شديدة جدًا</option></select>
+          <textarea name="careSummary" placeholder="ملخص الحالة / أهم الملاحظات" className="w-full rounded-xl border border-border px-3 py-2 min-h-24" />
+          <SubmitButton className="w-full" loadingText="جاري إنشاء ملف الطفل...">حفظ ملف الطفل</SubmitButton>
+        </form>
+      </section>
+    </div>
+
+    <section className="rounded-2xl border border-border bg-surface p-6">
+      <div className="flex items-center justify-between"><div><h2 className="font-bold text-xl">المراكز الحالية</h2><p className="text-xs text-muted mt-1">كل مركز مرتبط بأحد أطفالك</p></div><Link href="/centers" className="text-sm text-primary font-semibold">عرض كل المراكز ←</Link></div>
+      <div className="grid md:grid-cols-3 gap-4 mt-5">
+        {memberships.length ? memberships.map(({ center, child }) => <div key={`${center.id}-${child.id}`} className="rounded-xl bg-background p-4"><p className="font-semibold">{center.name}</p><p className="text-xs text-muted mt-1">للطفل: {child.firstName} {child.lastName}</p><p className="text-xs text-muted mt-1">{center.address ?? ""}</p><span className="inline-block mt-3 text-xs text-success">● نشط</span></div>) : <p className="text-sm text-muted">لا توجد مراكز مرتبطة حتى الآن.</p>}
+      </div>
+    </section>
+  </div>;
+}
