@@ -3,7 +3,7 @@ import * as React from "react";
 import { useFormStatus } from "react-dom";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
-import { Loader2, Search, AlertCircle, CheckCircle2, Info, AlertTriangle } from "lucide-react";
+import { Loader2, Search, AlertCircle, CheckCircle2, Info, AlertTriangle, UploadCloud, X, File } from "lucide-react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import * as SelectPrimitive from "@radix-ui/react-select";
 import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog";
@@ -33,11 +33,115 @@ export const Dialog=DialogPrimitive.Root;export const DialogTrigger=DialogPrimit
 export const DialogContent=React.forwardRef<React.ElementRef<typeof DialogPrimitive.Content>,React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>>(({className,children,...props},ref)=><DialogPrimitive.Portal><DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-ink/40"/><DialogPrimitive.Content ref={ref} className={cn("fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border bg-surface p-6 shadow-xl",className)} {...props}>{children}</DialogPrimitive.Content></DialogPrimitive.Portal>);DialogContent.displayName="DialogContent";
 export function DialogHeader({className,...props}:React.HTMLAttributes<HTMLDivElement>){return <div className={cn("flex flex-col gap-1.5",className)} {...props}/>};export function DialogTitle({className,...props}:React.ComponentPropsWithoutRef<typeof DialogPrimitive.Title>){return <DialogPrimitive.Title className={cn("text-lg font-semibold text-ink",className)} {...props}/>};export function DialogDescription({className,...props}:React.ComponentPropsWithoutRef<typeof DialogPrimitive.Description>){return <DialogPrimitive.Description className={cn("text-sm text-muted",className)} {...props}/>};export function DialogFooter({className,...props}:React.HTMLAttributes<HTMLDivElement>){return <div className={cn("flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4",className)} {...props}/>}
 export const AlertDialog=AlertDialogPrimitive.Root;export const AlertDialogTrigger=AlertDialogPrimitive.Trigger;export const AlertDialogContent=React.forwardRef<React.ElementRef<typeof AlertDialogPrimitive.Content>,React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Content>>(({className,children,...props},ref)=><AlertDialogPrimitive.Portal><AlertDialogPrimitive.Overlay className="fixed inset-0 z-50 bg-ink/40"/><AlertDialogPrimitive.Content ref={ref} className={cn("fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border bg-surface p-6 shadow-xl",className)} {...props}>{children}</AlertDialogPrimitive.Content></AlertDialogPrimitive.Portal>);AlertDialogContent.displayName="AlertDialogContent";export const AlertDialogTitle=AlertDialogPrimitive.Title;export const AlertDialogDescription=AlertDialogPrimitive.Description;export const AlertDialogCancel=AlertDialogPrimitive.Cancel;export const AlertDialogAction=AlertDialogPrimitive.Action;export function AlertDialogFooter({className,...props}:React.HTMLAttributes<HTMLDivElement>){return <div className={cn("flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4",className)} {...props}/>}
-export function EmptyState({icon:Icon,title,description,action}:{icon?:React.ComponentType<{className?:string}>;title:string;description?:string;action?:React.ReactNode}){return <div className="flex flex-col items-center justify-center py-16 px-6 text-center"><h3 className="text-base font-semibold text-ink">{title}</h3>{description?<p className="text-sm text-muted mt-1 max-w-md">{description}</p>:null}{action?<div className="mt-6">{action}</div>:null}</div>}
+export function EmptyState({icon:Icon,title,description,action}:{icon?:React.ComponentType<{className?:string}>;title:string;description?:string;action?:React.ReactNode}){return <div className="flex flex-col items-center justify-center py-16 px-6 text-center">{Icon?<Icon className="h-10 w-10 text-muted mb-3"/>:null}<h3 className="text-base font-semibold text-ink">{title}</h3>{description?<p className="text-sm text-muted mt-1 max-w-md">{description}</p>:null}{action?<div className="mt-6">{action}</div>:null}</div>}
 export function LoadingState({label="جاري التحميل..."}:{label?:string}){return <div className="flex flex-col items-center justify-center py-24 text-center"><Loader2 className="h-6 w-6 animate-spin text-primary"/><p className="text-sm text-muted mt-3">{label}</p></div>}
 export function ErrorState({title="حدث خطأ",message="تعذّر تحميل البيانات. يرجى المحاولة لاحقًا."}:{title?:string;message?:string;onRetry?:()=>void}){return <div className="flex flex-col items-center justify-center py-16 text-center"><h3 className="text-base font-semibold text-ink">{title}</h3><p className="text-sm text-muted mt-1 max-w-md">{message}</p></div>}
 export function Alert({variant="info",title,children}:{variant?:"info"|"success"|"warning"|"error";title?:string;children?:React.ReactNode}){const c={info:{bg:"bg-primary/10",color:"text-primary",Icon:Info},success:{bg:"bg-success/10",color:"text-success",Icon:CheckCircle2},warning:{bg:"bg-warning/10",color:"text-warning",Icon:AlertTriangle},error:{bg:"bg-danger/10",color:"text-danger",Icon:AlertCircle}}[variant];const Icon=c.Icon;return <div className={cn("flex gap-3 rounded-xl p-4",c.bg,c.color)}><Icon className="h-5 w-5"/><div>{title?<p className="font-semibold text-sm">{title}</p>:null}{children?<div className="text-sm mt-0.5">{children}</div>:null}</div></div>}
 export function StatCard({title,value,hint,icon:Icon,tone="primary"}:{title:string;value:string|number;hint?:string;icon?:React.ComponentType<{className?:string}>;tone?:"primary"|"success"|"warning"|"accent"}){const tones={primary:"bg-primary/10 text-primary",success:"bg-success/10 text-success",warning:"bg-warning/10 text-warning",accent:"bg-accent/10 text-accent"};return <Card className="p-5"><div className="flex items-start justify-between"><div><p className="text-sm text-muted">{title}</p><p className="text-2xl font-bold text-ink mt-2">{value}</p>{hint?<p className="text-xs text-muted mt-1">{hint}</p>:null}</div>{Icon?<div className={cn("h-10 w-10 rounded-xl flex items-center justify-center",tones[tone])}><Icon className="h-5 w-5"/></div>:null}</div></Card>}
 export function PageHeader({title,subtitle,actions}:{title:string;subtitle?:string;actions?:React.ReactNode}){return <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6"><div><h1 className="text-2xl font-bold text-ink">{title}</h1>{subtitle?<p className="text-sm text-muted mt-1">{subtitle}</p>:null}</div>{actions?<div className="flex items-center gap-2">{actions}</div>:null}</div>}
 export function SearchInput({value,onChange,placeholder="بحث..."}:{value:string;onChange:(v:string)=>void;placeholder?:string}){return <Input icon={<Search className="h-4 w-4"/>} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder}/>}
+
+export interface FileUploaderProps {
+  value?: File | File[] | null;
+  onChange?: (files: File | File[] | null) => void;
+  onFilesChange?: (files: File[]) => void;
+  multiple?: boolean;
+  accept?: string;
+  maxSize?: number;
+  disabled?: boolean;
+  className?: string;
+  label?: React.ReactNode;
+  description?: React.ReactNode;
+  [key: string]: unknown;
+}
+
+export function FileUploader({
+  value,
+  onChange,
+  onFilesChange,
+  multiple = false,
+  accept,
+  maxSize,
+  disabled = false,
+  className,
+  label = "اختر ملفًا",
+  description = "اسحب الملف هنا أو اضغط للاختيار",
+  ...rest
+}: FileUploaderProps) {
+  const inputRef = React.useRef<HTMLInputElement>(null);
+  const [files, setFiles] = React.useState<File[]>(() => {
+    if (Array.isArray(value)) return value;
+    return value ? [value] : [];
+  });
+  const [error, setError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (Array.isArray(value)) setFiles(value);
+    else if (value) setFiles([value]);
+    else if (value === null) setFiles([]);
+  }, [value]);
+
+  const handleFiles = (selected: File[]) => {
+    setError(null);
+    const filtered = maxSize ? selected.filter((file) => {
+      if (file.size > maxSize) {
+        setError(`حجم الملف ${file.name} أكبر من الحد المسموح`);
+        return false;
+      }
+      return true;
+    }) : selected;
+    const next = multiple ? filtered : filtered.slice(0, 1);
+    setFiles(next);
+    if (multiple) onFilesChange?.(next);
+    onChange?.(multiple ? next : (next[0] ?? null));
+  };
+
+  const removeFile = (index: number) => {
+    const next = files.filter((_, i) => i !== index);
+    setFiles(next);
+    if (multiple) onFilesChange?.(next);
+    onChange?.(multiple ? next : (next[0] ?? null));
+  };
+
+  return (
+    <div className={cn("space-y-2", className)} {...(rest as React.HTMLAttributes<HTMLDivElement>)}>
+      <input
+        ref={inputRef}
+        type="file"
+        className="sr-only"
+        accept={accept}
+        multiple={multiple}
+        disabled={disabled}
+        onChange={(event) => handleFiles(Array.from(event.target.files ?? []))}
+      />
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => inputRef.current?.click()}
+        className="w-full rounded-xl border-2 border-dashed border-border bg-background/50 p-6 text-center transition hover:border-primary-light hover:bg-background disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        <UploadCloud className="mx-auto h-8 w-8 text-muted" />
+        <p className="mt-2 text-sm font-medium text-ink">{label}</p>
+        <p className="mt-1 text-xs text-muted">{description}</p>
+      </button>
+      {error ? <p className="text-xs text-danger">{error}</p> : null}
+      {files.length ? (
+        <div className="space-y-2">
+          {files.map((file, index) => (
+            <div key={`${file.name}-${file.lastModified}-${index}`} className="flex items-center justify-between rounded-lg border border-border bg-surface px-3 py-2">
+              <div className="flex min-w-0 items-center gap-2">
+                <File className="h-4 w-4 shrink-0 text-muted" />
+                <span className="truncate text-sm text-ink">{file.name}</span>
+              </div>
+              <button type="button" className="text-muted hover:text-danger" onClick={() => removeFile(index)} aria-label="حذف الملف">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export { Search };
