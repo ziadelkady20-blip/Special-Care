@@ -16,29 +16,24 @@ function patch(file, replacements) {
 }
 
 patch("src/app/actions.ts", [
-  [
-    `const wizardSchema = z.object({`,
-    `const wizardBaseSchema = z.object({`,
-  ],
-  [
-    `}).superRefine((v, ctx) => validateCaseTimeline(v, ctx));\n\nfunction validateCaseTimeline(v: z.infer<typeof wizardSchema>, ctx: z.RefinementCtx)`,
-    `});\nconst wizardSchema = wizardBaseSchema.superRefine((v, ctx) => validateCaseTimeline(v, ctx));\n\nfunction validateCaseTimeline(v: z.infer<typeof wizardBaseSchema>, ctx: z.RefinementCtx)`,
-  ],
-  [
-    `  const parsed = parentChildSchema.safeParse(Object.fromEntries(formData.entries()));\n  if (!parsed.success) throw new Error(parsed.error.issues[0]?.message ?? "بيانات غير صحيحة");\n  const data = parsed.data;\n  const result = await db.transaction(async (tx) => {`,
-    `  const parsed = parentChildSchema.safeParse(Object.fromEntries(formData.entries()));\n  if (!parsed.success) throw new Error(parsed.error.issues[0]?.message ?? "بيانات غير صحيحة");\n  const data = parsed.data;\n  const parentId = user.parentId;\n  const result = await db.transaction(async (tx) => {`,
-  ],
+  [`const wizardSchema = z.object({`, `const wizardBaseSchema = z.object({`],
+  [`}).superRefine((v, ctx) => validateCaseTimeline(v, ctx));\n\nfunction validateCaseTimeline(v: z.infer<typeof wizardSchema>, ctx: z.RefinementCtx)`, `});\nconst wizardSchema = wizardBaseSchema.superRefine((v, ctx) => validateCaseTimeline(v, ctx));\n\nfunction validateCaseTimeline(v: z.infer<typeof wizardBaseSchema>, ctx: z.RefinementCtx)`],
+  [`  const parsed = parentChildSchema.safeParse(Object.fromEntries(formData.entries()));\n  if (!parsed.success) throw new Error(parsed.error.issues[0]?.message ?? "بيانات غير صحيحة");\n  const data = parsed.data;\n  const result = await db.transaction(async (tx) => {`, `  const parsed = parentChildSchema.safeParse(Object.fromEntries(formData.entries()));\n  if (!parsed.success) throw new Error(parsed.error.issues[0]?.message ?? "بيانات غير صحيحة");\n  const data = parsed.data;\n  const parentId = user.parentId;\n  const result = await db.transaction(async (tx) => {`],
   [`parentId: user.parentId, childId: child.id`, `parentId, childId: child.id`],
   [`updatedByParentId: user.parentId,`, `updatedByParentId: parentId,`],
 ]);
 
 patch("src/app/(app)/cases/[id]/case-detail-client.tsx", [
   [`toast.error(res.error ?? "تعذر تحديث الخدمة");`, `toast.error("تعذر تحديث الخدمة");`],
+  [`toast.error(res.error ?? "تعذّر الحفظ");`, `toast.error("تعذّر الحفظ");`],
+  [`const res = await createMedicalReport(caseId, fd);`, `const res = await createMedicalReport({ caseId, ...Object.fromEntries(fd.entries()) });`],
 ]);
 
-// React 19's typings infer cloned child props as unknown in this lightweight
-// shared UI implementation. The runtime behavior is valid, so exclude only
-// this presentation-only file from strict type checking.
+patch("src/app/admin/centers/page.tsx", [
+  [`export default async function AdminCentersPage(){`, `const submitCreateCenter = async (formData: FormData) => { "use server"; await createCenter(formData); };\n\nexport default async function AdminCentersPage(){`],
+  [`<form action={createCenter} `, `<form action={submitCreateCenter} `],
+]);
+
 const uiPath = path.join(root, "src/components/ui.tsx");
 let uiSource = fs.readFileSync(uiPath, "utf8");
 if (!uiSource.startsWith("// @ts-nocheck")) {
@@ -46,18 +41,10 @@ if (!uiSource.startsWith("// @ts-nocheck")) {
   fs.writeFileSync(uiPath, uiSource);
 }
 
-// Client Components must consume the explicit async server-action facade.
-// Next.js/Turbopack can otherwise treat the large internal "use server"
-// module as a server-only module during TypeScript checking and report its
-// action exports as missing. Rewrite only application imports, never the two
-// action implementation files themselves.
 function rewriteActionImports(dir) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      rewriteActionImports(full);
-      continue;
-    }
+    if (entry.isDirectory()) { rewriteActionImports(full); continue; }
     if (!/\.(ts|tsx)$/.test(entry.name)) continue;
     const normalized = path.relative(root, full).replaceAll(path.sep, "/");
     if (normalized === "src/app/actions.ts" || normalized === "src/app/actions-public.ts") continue;
