@@ -15,7 +15,6 @@
     "incremental": true,
     "baseUrl": ".",
     "paths": {
-      "@/app/actions": ["./src/app/actions-public.ts"],
       "@/*": ["./src/*"]
     },
     "plugins": [{ "name": "next" }]
