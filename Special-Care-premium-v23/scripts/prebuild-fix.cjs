@@ -21,7 +21,7 @@ patch("src/app/actions.ts", [
     `const wizardBaseSchema = z.object({`,
   ],
   [
-    `}).superRefine((v, ctx) => validateCaseTimeline(v, ctx);\n\nfunction validateCaseTimeline(v: z.infer<typeof wizardSchema>, ctx: z.RefinementCtx)`,
+    `}).superRefine((v, ctx) => validateCaseTimeline(v, ctx));\n\nfunction validateCaseTimeline(v: z.infer<typeof wizardSchema>, ctx: z.RefinementCtx)`,
     `});\nconst wizardSchema = wizardBaseSchema.superRefine((v, ctx) => validateCaseTimeline(v, ctx));\n\nfunction validateCaseTimeline(v: z.infer<typeof wizardBaseSchema>, ctx: z.RefinementCtx)`,
   ],
   [
