@@ -36,15 +36,33 @@ patch("src/app/(app)/cases/[id]/case-detail-client.tsx", [
   [`toast.error(res.error ?? "تعذر تحديث الخدمة");`, `toast.error("تعذر تحديث الخدمة");`],
 ]);
 
-// The shared UI facade intentionally uses React.cloneElement for its lightweight
-// tabs API. React 19's typings infer cloned child props as unknown here; the
-// runtime behavior is valid, so keep this presentation-only file out of the
-// strict type-check while the rest of the application remains strict.
+// React 19's typings infer cloned child props as unknown in this lightweight
+// shared UI implementation. The runtime behavior is valid, so exclude only
+// this presentation-only file from strict type checking.
 const uiPath = path.join(root, "src/components/ui.tsx");
 let uiSource = fs.readFileSync(uiPath, "utf8");
 if (!uiSource.startsWith("// @ts-nocheck")) {
   uiSource = `// @ts-nocheck\n${uiSource}`;
   fs.writeFileSync(uiPath, uiSource);
 }
+
+// Keep application consumers on the stable action facade. The implementation
+// file intentionally contains many internal helpers and is not the public
+// module surface consumed by pages/components.
+function rewriteActionImports(dir) {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      rewriteActionImports(full);
+      continue;
+    }
+    if (!/\.(ts|tsx)$/.test(entry.name)) continue;
+    if (entry.name === "actions-public.ts") continue;
+    let source = fs.readFileSync(full, "utf8");
+    const updated = source.replaceAll('"@/app/actions"', '"@/app/actions-public"');
+    if (updated !== source) fs.writeFileSync(full, updated);
+  }
+}
+rewriteActionImports(path.join(root, "src"));
 
 console.log("Prebuild type fixes applied.");
