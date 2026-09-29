@@ -5,7 +5,7 @@ const required = ["DATABASE_URL", "NEXTAUTH_SECRET"] as const;
 export function getEnvStatus() {
   const missing = required.filter((key) => !process.env[key]?.trim());
   const secretLength = process.env.NEXTAUTH_SECRET?.length ?? 0;
-  const issues = [...missing];
+  const issues: string[] = [...missing];
   if (process.env.NEXTAUTH_SECRET && secretLength < 32) {
     issues.push("NEXTAUTH_SECRET must be at least 32 characters");
   }
