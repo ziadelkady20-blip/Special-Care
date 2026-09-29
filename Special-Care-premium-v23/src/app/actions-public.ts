@@ -5,11 +5,23 @@ import { db } from "@/db";
 import { cases, followUps, notes, medicalReports, users, roles, centers, parents, parentChildren, childCenters } from "@/db/schema";
 import { hashPassword } from "@/lib/auth";
 import { getCurrentAppUser } from "@/lib/session";
+import { createCase as createCaseAction, updateCase as updateCaseAction } from "./actions";
 
 async function session() {
   const user = await getCurrentAppUser();
   if (!user) throw new Error("الجلسة غير صالحة");
   return user;
+}
+
+// Keep the public action facade limited to explicit async exports. This avoids
+// re-exporting non-action values from the large internal actions module, which
+// Next.js/Turbopack rejects in a "use server" module.
+export async function createCase(input: unknown) {
+  return createCaseAction(input);
+}
+
+export async function updateCase(input: unknown) {
+  return updateCaseAction(input);
 }
 
 export async function createFollowUp(input: any) {
